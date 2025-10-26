@@ -1,5 +1,5 @@
 from src.account import Account
-
+import pytest
 
 class TestAccount:
     def test_account_creation(self):
@@ -36,3 +36,45 @@ class TestAccount:
     def test_wrong_age_promo_code(self):
         account = Account("Jan", "Kowalski", "59270803628", promo_code = "CODE_ABC")
         assert account.balance == 0
+
+    class TestAccountTransfers:
+        def test_increases(self):
+            account = Account("John", "Doe", "02270803628", promo_code="PROM_ABC")
+            account.deposit(100)
+            assert account.balance == 150
+
+        def test_withdraw(self):
+            account = Account("John", "Doe", "02270803628")
+            account.deposit(200)
+            account.withdraw(50)
+            assert account.balance == 150
+
+        def test_failed_withdraw(self):
+            account = Account("John", "Doe", "02270803628")
+            account.deposit(100)
+            account.withdraw(200)
+
+
+class TestAccountTransfers:
+    def test_increases(self):
+        account = Account("John", "Doe", "02270803628", promo_code="PROM_ABC")
+        account.deposit(100)
+        assert account.balance == 150
+
+    def test_withdraw(self):
+        account = Account("John", "Doe", "02270803628")
+        account.deposit(200)
+        account.withdraw(50)
+        assert account.balance == 150
+
+    def test_failed_withdraw(self):
+        account = Account("John", "Doe", "02270803628")
+        account.deposit(100)
+        with pytest.raises(ValueError):
+            account.withdraw(200)
+
+    def test_express_transfer_personal(self):
+        account = Account("John", "Doe", "02270803628", promo_code = "PROM_ABC")
+        account.deposit(100)
+        account.express_transfer(50)
+        assert account.balance == 99

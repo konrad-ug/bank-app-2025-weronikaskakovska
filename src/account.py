@@ -39,3 +39,16 @@ class Account:
         else:
             return False
         return year > 1960
+
+    def deposit(self, amount):
+        self.balance += amount
+
+    def withdraw(self, amount):
+        if amount > self.balance:
+            raise ValueError("Za mało środków")
+        self.balance -= amount
+
+    def express_transfer(self, amount):
+        if amount > self.balance:
+            raise ValueError("Brak środkow")
+        self.balance -= (amount + 1)
