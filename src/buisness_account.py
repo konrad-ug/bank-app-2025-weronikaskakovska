@@ -5,7 +5,8 @@ class BuisnessAccount:
 
         if len(nip) != 10:
             self.nip = "Invalid"
-        self.nip = nip
+        else:
+            self.nip = nip
 
     def deposit(self, amount):
         self.balance += amount

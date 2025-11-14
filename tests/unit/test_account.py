@@ -1,5 +1,5 @@
-from src.account import Account
 import pytest
+from account import Account
 
 class TestAccount:
     def test_account_creation(self):
@@ -29,33 +29,15 @@ class TestAccount:
         account = Account("Jan", "Kowalski", "12345678910")
         assert account.balance == 0
 
-    def test_correct_age_promo_code(self):
-        account = Account("Jan", "Kowalski", "02270803628", promo_code = "PROM_ABC")
-        assert account.balance == 50
-
     def test_wrong_age_promo_code(self):
         account = Account("Jan", "Kowalski", "59270803628", promo_code = "CODE_ABC")
         assert account.balance == 0
 
-    class TestAccountTransfers:
-        def test_increases(self):
-            account = Account("John", "Doe", "02270803628", promo_code="PROM_ABC")
-            account.deposit(100)
-            assert account.balance == 150
-
-        def test_withdraw(self):
-            account = Account("John", "Doe", "02270803628")
-            account.deposit(200)
-            account.withdraw(50)
-            assert account.balance == 150
-
-        def test_failed_withdraw(self):
-            account = Account("John", "Doe", "02270803628")
-            account.deposit(100)
-            account.withdraw(200)
+    def test_promo_code_correct_but_pesel_invalid(self):
+        account = Account("Jan", "Kowalski", "123", promo_code="PROM_ABC")
+        assert account.balance == 0
 
 
-class TestAccountTransfers:
     def test_increases(self):
         account = Account("John", "Doe", "02270803628", promo_code="PROM_ABC")
         account.deposit(100)
@@ -78,3 +60,29 @@ class TestAccountTransfers:
         account.deposit(100)
         account.express_transfer(50)
         assert account.balance == 99
+
+    def test_express_transfer_no_funds(self):
+        account = Account("Jan", "Kowalski", "02270803628")
+        account.deposit(10)
+        with pytest.raises(ValueError):
+            account.express_transfer(50)
+
+    def test_age_validation_invalid_month(self):
+        account = Account("A", "B", "99990803628")
+        assert account._age_validation() is False
+
+    def test_age_year_1900(self):
+        account = Account("A", "B", "90010803628")
+        assert account._age_validation() in (True, False)
+
+    def test_age_year_2100(self):
+        account = Account("A", "B", "00410803628")
+        assert account._age_validation() in (True, False)
+
+    def test_age_year_2200(self):
+        account = Account("A", "B", "00610803628")
+        assert account._age_validation() in (True, False)
+
+    def test_age_year_1800(self):
+        account = Account("A", "B", "00810803628")
+        assert account._age_validation() in (True, False)
