@@ -57,3 +57,22 @@ class Account:
         self.balance -= (amount + 1)
         self.history.append(-amount)
         self.history.append(-1)
+
+    def submit_for_loan(self, amount):
+        condition1 = False
+        if len(self.history) >= 5:
+            condition1 = sum(self.history[-5:]) > amount
+
+        condition2 = False
+        if len(self.history) >= 3:
+            if self.history[-1] > 0 and self.history[-2] > 0 and self.history[-3] > 0:
+                condition2 = True
+            else:
+                condition2 = False
+
+        if condition1 or condition2:
+            self.balance += amount
+            self.history.append(amount)
+            return True
+        else:
+            return False

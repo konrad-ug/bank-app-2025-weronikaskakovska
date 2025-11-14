@@ -103,3 +103,21 @@ class TestAccount:
         account.deposit(500)
         account.express_transfer(100)
         assert account.history == [500, -100, -1]
+
+    def test_loan_condition2_correct(self):
+        account = Account("John", "Doe", "0227083628")
+        account.history = [100, -20, 50, 40, 30]
+        assert account.submit_for_loan(200) is True
+        assert account.balance == 200
+
+    def test_loan_condition1_correct(self):
+        account = Account("John", "Doe", "0227083628")
+        account.history = [100, 200, -5, -1, 1]
+        assert account.submit_for_loan(200) is True
+        assert account.balance == 200
+
+    def test_not_quilified_for_loan(self):
+        account = Account("John", "Doe", "0227083628")
+        account.history = [100, 100, -50, -1, 1]
+        assert account.submit_for_loan(200) is False
+        assert account.balance == 0
