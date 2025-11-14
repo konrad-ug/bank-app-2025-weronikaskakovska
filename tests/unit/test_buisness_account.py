@@ -37,3 +37,9 @@ class TestBuisnessAccount:
         account = BuisnessAccount("Firma 1", "1234567891")
         with pytest.raises(ValueError):
             account.express_transfer(200)
+
+    def test_buisness_account_history_express_transfer(self):
+        account = BuisnessAccount("Firma1", "1234567891")
+        account.deposit(1000)
+        account.express_transfer(300)
+        assert account.history == [1000, -300, -5]
