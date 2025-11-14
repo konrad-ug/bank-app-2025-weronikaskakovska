@@ -86,3 +86,20 @@ class TestAccount:
     def test_age_year_1800(self):
         account = Account("A", "B", "00810803628")
         assert account._age_validation() in (True, False)
+
+    def test_account_history_transfer(self):
+        account = Account("John", "Doe", "0227083628")
+        account.deposit(500)
+        assert account.history == [500.00]
+
+    def test_account_history_outgoing(self):
+        account = Account("John", "Doe", "0227083628")
+        account.deposit(500)
+        account.withdraw(200)
+        assert account.history == [500, -200]
+
+    def test_account_history_express_transfer(self):
+        account = Account("John", "Doe", "0227083628")
+        account.deposit(500)
+        account.express_transfer(100)
+        assert account.history == [500, -100, -1]

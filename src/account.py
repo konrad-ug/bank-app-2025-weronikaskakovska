@@ -2,6 +2,7 @@ class Account:
     def __init__(self, first_name, last_name, pesel, promo_code = None):
         self.first_name = first_name
         self.last_name = last_name
+        self.history = []
 
         if len(pesel) == 11:
             self.pesel = pesel
@@ -42,13 +43,17 @@ class Account:
 
     def deposit(self, amount):
         self.balance += amount
+        self.history.append(amount)
 
     def withdraw(self, amount):
         if amount > self.balance:
             raise ValueError("Za mało środków")
         self.balance -= amount
+        self.history.append(-amount)
 
     def express_transfer(self, amount):
         if amount > self.balance:
             raise ValueError("Brak środkow")
         self.balance -= (amount + 1)
+        self.history.append(-amount)
+        self.history.append(-1)
