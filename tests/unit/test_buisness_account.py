@@ -2,44 +2,51 @@ import pytest
 from buisness_account import BuisnessAccount
 
 class TestBuisnessAccount:
+    @pytest.fixture
+    def valid_nip(self):
+        return "1234567891"
 
-    def test_invalid_nip(self):
-        account = BuisnessAccount("Firma 1", "12345")
-        assert account.nip == "Invalid"
+    @pytest.mark.parametrize("nip, expected", [
+        ("12345", "Invalid"),
+        ("1234567891", "1234567891"),
+    ])
+    def test_nip_validation(self, nip, expected):
+        acc = BuisnessAccount("Firma 1", nip)
+        assert acc.nip == expected
 
-    def test_valid_nip(self):
-        account = BuisnessAccount("Firma 1", "1234567891")
-        assert account.nip == "1234567891"
+    def test_deposit(self, valid_nip):
+        acc = BuisnessAccount("Firma 1", valid_nip)
+        acc.deposit(300)
+        assert acc.balance == 300
 
-    def test_deposit(self):
-        account = BuisnessAccount("Firma 1", "1234567891")
-        account.deposit(300)
-        assert account.balance == 300
+    def test_withdraw(self, valid_nip):
+        acc = BuisnessAccount("Firma 1", valid_nip)
+        acc.deposit(1000)
+        acc.withdraw(200)
+        assert acc.balance == 800
 
-    def test_withdraw(self):
-        account = BuisnessAccount("Firma 1", "1234567891")
-        account.deposit(1000)
-        account.withdraw(200)
-        assert account.balance == 800
-
-    def test_withdraw_no_funds(self):
-        account = BuisnessAccount("Firma 1", "1234567891")
+    def test_withdraw_no_funds(self, valid_nip):
+        acc = BuisnessAccount("Firma 1", valid_nip)
         with pytest.raises(ValueError):
-            account.withdraw(500)
+            acc.withdraw(500)
 
-    def test_express_transfer_buisness(self):
-        account = BuisnessAccount("Firma 1", "1234567891")
-        account.deposit(100)
-        account.express_transfer(50)
-        assert account.balance == 45
+    @pytest.mark.parametrize("amount, expected", [
+        (50, 945),
+        (300, 695),
+    ])
+    def test_express_transfer(self, valid_nip, amount, expected):
+        acc = BuisnessAccount("Firma 1", valid_nip)
+        acc.deposit(1000)
+        acc.express_transfer(amount)
+        assert acc.balance == expected
 
-    def test_express_transfer_insufficient_funds(self):
-        account = BuisnessAccount("Firma 1", "1234567891")
+    def test_express_transfer_insufficient_funds(self, valid_nip):
+        acc = BuisnessAccount("Firma 1", valid_nip)
         with pytest.raises(ValueError):
-            account.express_transfer(200)
+            acc.express_transfer(200)
 
-    def test_buisness_account_history_express_transfer(self):
-        account = BuisnessAccount("Firma1", "1234567891")
-        account.deposit(1000)
-        account.express_transfer(300)
-        assert account.history == [1000, -300, -5]
+    def test_history_express(self, valid_nip):
+        acc = BuisnessAccount("Firma1", valid_nip)
+        acc.deposit(1000)
+        acc.express_transfer(300)
+        assert acc.history == [1000, -300, -5]
