@@ -15,6 +15,11 @@ class TestAccount:
         account = Account("John", "Doe", pesel)
         assert account.pesel == expected
 
+    def test_age_validation_invalid_pesel(self):
+        account = Account("X", "Y", "12345")
+        assert account.pesel == "Invalid"
+        assert account._age_validation() is False
+
     @pytest.mark.parametrize("promo, expected_balance", [
         ("PROM_ABC", 50),
         ("CODE_ABC", 0),
@@ -106,3 +111,8 @@ class TestAccount:
             assert acc.balance == amount
         else:
             assert acc.balance == 0
+
+    def test_loan_condition1_not_enough_history(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        acc.history = [100, -20]
+        assert acc.loan_condition1(1000) is False
