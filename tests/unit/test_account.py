@@ -1,5 +1,5 @@
 import pytest
-from account import Account
+from account import Account, AccountsRegistry
 
 class TestAccount:
     @pytest.fixture
@@ -116,3 +116,15 @@ class TestAccount:
         acc = Account("A", "B", valid_pesel)
         acc.history = [100, -20]
         assert acc.loan_condition1(1000) is False
+
+    @pytest.fixture
+    def registry(self):
+        return AccountsRegistry()
+
+    @pytest.mark.parametrize("number_of_accounts", [0, 1, 3, 5])
+    def test_accounts_registry_count(registry, number_of_accounts):
+        for i in range(number_of_accounts):
+            registry.add_account(Account("Jan", "Test", f"9001011234{i}"))
+
+        assert registry.count_accounts() == number_of_accounts
+
