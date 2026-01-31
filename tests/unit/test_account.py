@@ -140,30 +140,6 @@ class TestAccount:
 
         assert registry.count_accounts() == number_of_accounts
 
-    def _age_validation(self):
-        if self.pesel == "Invalid":
-            return False
-
-        year = int(self.pesel[0:2])
-        month = int(self.pesel[2:4])
-
-        if 1 <= month <= 12:
-            year += 1900
-        elif 21 <= month <= 32:
-            year += 2000
-        elif 41 <= month <= 52:
-            year += 2100
-        elif 61 <= month <= 72:
-            year += 2200
-        elif 81 <= month <= 92:
-            year += 1800
-        else:
-            return False
-
-        # Changed from > to >=
-        current_year = 2026
-        return 1960 <= year <= current_year  # or just: return year >= 1960
-
     def test_withdraw_history(self, valid_pesel):
         acc = Account("Test", "User", valid_pesel)
         acc.deposit(100)
