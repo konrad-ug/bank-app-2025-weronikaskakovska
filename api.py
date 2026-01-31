@@ -9,12 +9,20 @@ registry = AccountsRegistry()
 def create_account():
     data = request.get_json()
 
+    if not isinstance(data, dict):
+        return jsonify({"error": "Invalid JSON format, expected an object"}), 400
+
+    required_fields = ["name", "surname", "pesel"]
+    missing_fields = [f for f in required_fields if f not in data]
+    if missing_fields:
+        return jsonify({"error": f"Missing fields: {', '.join(missing_fields)}"}), 400
+
+
     account = Account(
         data["name"],
         data["surname"],
         data["pesel"]
     )
-
     registry.add_account(account)
     return jsonify({"message": "Account created"}), 201
 
