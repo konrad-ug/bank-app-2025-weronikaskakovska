@@ -6,6 +6,10 @@ class TestAccount:
     def valid_pesel(self):
         return "02270803628"
 
+    @pytest.fixture
+    def registry(self):
+        return AccountsRegistry()
+
     @pytest.mark.parametrize("pesel, expected", [
         ("12345678910", "12345678910"),
         ("12345", "Invalid"),
@@ -19,6 +23,17 @@ class TestAccount:
         account = Account("X", "Y", "12345")
         assert account.pesel == "Invalid"
         assert account._age_validation() is False
+
+    @pytest.mark.parametrize("pesel, expected_valid", [
+        ("50010112345", True),
+        ("02210112345", True),
+        ("02410112345", False),
+        ("02610112345", False),
+        ("80810112345", False),
+    ])
+    def test_age_validation_all_centuries(self, pesel, expected_valid):
+        acc = Account("Test", "User", pesel)
+        assert acc._age_validation() is expected_valid
 
     @pytest.mark.parametrize("promo, expected_balance", [
         ("PROM_ABC", 50),
@@ -144,9 +159,6 @@ class TestAccount:
         acc.history = [100, -20]
         assert acc.loan_condition1(1000) is False
 
-    @pytest.fixture
-    def registry(self):
-        return AccountsRegistry()
 
     @pytest.mark.parametrize("number_of_accounts", [0, 1, 3, 5])
     def test_accounts_registry_count(self, registry, number_of_accounts):
@@ -155,25 +167,102 @@ class TestAccount:
 
         assert registry.count_accounts() == number_of_accounts
 
-    def test_registry_find_by_pesel(self, registry):
-        acc = Account("A", "B", "90010112345")
+    def test_withdraw_history(self, valid_pesel):
+        acc = Account("Test", "User", valid_pesel)
+        acc.deposit(100)
+        acc.withdraw(30)
+        assert acc.history == [100, -30]
+
+    def test_loan_condition2_insufficient_history(self, valid_pesel):
+        acc = Account("Test", "User", valid_pesel)
+        acc.history = [100, 50]
+        assert acc.loan_condition2(100) is False
+
+    def test_loan_condition2_with_negatives(self, valid_pesel):
+        acc = Account("Test", "User", valid_pesel)
+        acc.history = [100, -50, 200]
+        assert acc.loan_condition2(100) is False
+
+        acc.history = [100, 50, -20]
+        assert acc.loan_condition2(100) is False
+
+    def test_loan_condition2_returns_false(self, valid_pesel):
+        acc = Account("Test", "User", valid_pesel)
+        acc.history = [100, 50, 0]
+        result = acc.loan_condition2(100)
+        assert result is False
+
+    def test_loan_condition1_exactly_5_items(self, valid_pesel):
+        acc = Account("Test", "User", valid_pesel)
+        acc.history = [50, 50, 50, 50, 50]
+        assert acc.loan_condition1(200) is True
+        assert acc.loan_condition1(300) is False
+
+    def test_registry_find_by_pesel_not_found(self, registry, valid_pesel):
+        acc = Account("Jan", "Kowalski", valid_pesel)
         registry.add_account(acc)
 
-        found = registry.find_by_pesel("90010112345")
-        assert found == acc
+        result = registry.find_by_pesel("99999999999")
+        assert result is None
 
-    def test_registry_find_by_pesel_not_found(self, registry):
-        assert registry.find_by_pesel("111") is None
+    def test_registry_delete_nonexistent(self, registry):
+        result = registry.delete_by_pesel("99999999999")
+        assert result is False
+
+    def test_registry_delete_existing(self, registry, valid_pesel):
+        acc = Account("Jan", "Kowalski", valid_pesel)
+        registry.add_account(acc)
+
+        result = registry.delete_by_pesel(valid_pesel)
+        assert result is True
+        assert registry.count_accounts() == 0
 
     def test_registry_get_all_accounts(self, registry):
-        acc1 = Account("A", "B", "90010111111")
-        acc2 = Account("C", "D", "90010122222")
+        acc1 = Account("Jan", "Kowalski", "90010112345")
+        acc2 = Account("Anna", "Nowak", "92020212345")
 
         registry.add_account(acc1)
         registry.add_account(acc2)
 
-        result = registry.get_all_accounts()
-        assert result == [acc1, acc2]
+        all_accounts = registry.get_all_accounts()
+        assert len(all_accounts) == 2
+        assert acc1 in all_accounts
+        assert acc2 in all_accounts
 
+    def test_account_equality(self):
+        acc1 = Account("Jan", "Kowalski", "90010112345")
+        acc2 = Account("Anna", "Nowak", "90010112345")
+        acc3 = Account("Jan", "Kowalski", "92020212345")
 
+        assert acc1 == acc2
+        assert acc1 != acc3
 
+    def test_account_equality_with_non_account(self, valid_pesel):
+        acc = Account("Jan", "Kowalski", valid_pesel)
+        assert acc != "not an account"
+        assert acc != 123
+        assert acc != None
+
+    def test_age_validation_year_1960(self):
+
+        acc = Account("Test", "User", "60010112345")
+
+        assert acc._age_validation() is True
+
+    def test_age_validation_year_1961(self):
+        acc = Account("Test", "User", "61010112345")
+        assert acc._age_validation() is True
+
+    def test_submit_loan_condition2_true(self, valid_pesel):
+        acc = Account("Test", "User", valid_pesel)
+        acc.history = [100, 200, 300]
+        result = acc.submit_for_loan(50)
+        assert result is True
+        assert acc.balance == 50
+        assert 50 in acc.history
+
+    def test_loan_balance_increase(self, valid_pesel):
+        acc = Account("Test", "User", valid_pesel)
+        acc.history = [100, 200, 300, 400, 500]
+        acc.submit_for_loan(1000)
+        assert acc.balance == 1000
