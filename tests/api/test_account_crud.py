@@ -1,5 +1,10 @@
 import requests
 import pytest
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from api import app
+
 
 BASE_URL = "http://127.0.0.1:5000/api/accounts"
 
@@ -20,10 +25,6 @@ def cleanup_registry(sample_account):
     requests.delete(f"{BASE_URL}/{sample_account['pesel']}")
 
 
-
-def test_create_account(sample_account):
-    r = requests.post(BASE_URL, json=sample_account)
-    assert r.status_code == 201
 
 
 def test_create_account_invalid_json():
@@ -179,3 +180,11 @@ def test_create_account_missing_fields():
     }
     r = requests.post(BASE_URL, json=incomplete_account)
     assert r.status_code == 500
+
+def test_create_account():
+    client = app.test_client()
+    response = client.post(
+        "/api/accounts",
+        json={"name": "Alice", "surname": "Smith", "pesel": "90010112345"}
+    )
+    assert response.status_code == 201

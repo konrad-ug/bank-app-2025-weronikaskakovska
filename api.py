@@ -93,7 +93,3 @@ def delete_account(pesel):
         return jsonify({"error": "Not found"}), 404
 
     return jsonify({"message": "Account deleted"}), 200
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
