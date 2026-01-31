@@ -25,11 +25,11 @@ class TestAccount:
         assert account._age_validation() is False
 
     @pytest.mark.parametrize("pesel, expected_valid", [
-        ("50010112345", True),  # 1900s (month 1-12) - born 1950
-        ("02210112345", True),  # 2000s (month 21-32) - born 2002
-        ("02410112345", False),  # 2100s (month 41-52) - born 2102 (future)
-        ("02610112345", False),  # 2200s (month 61-72) - born 2202 (future)
-        ("80810112345", False),  # 1800s (month 81-92) - born 1880 (too old)
+        ("50010112345", True),
+        ("02210112345", True),
+        ("02410112345", False),
+        ("02610112345", False),
+        ("80810112345", False),
     ])
     def test_age_validation_all_centuries(self, pesel, expected_valid):
         acc = Account("Test", "User", pesel)
@@ -146,34 +146,30 @@ class TestAccount:
         acc.withdraw(30)
         assert acc.history == [100, -30]
 
-    # Test loan_condition2 with less than 3 history items
     def test_loan_condition2_insufficient_history(self, valid_pesel):
         acc = Account("Test", "User", valid_pesel)
-        acc.history = [100, 50]  # Only 2 items
+        acc.history = [100, 50]
         assert acc.loan_condition2(100) is False
 
-    # Test loan_condition2 with negative values
     def test_loan_condition2_with_negatives(self, valid_pesel):
         acc = Account("Test", "User", valid_pesel)
-        acc.history = [100, -50, 200]  # Has negative value
+        acc.history = [100, -50, 200]
         assert acc.loan_condition2(100) is False
 
-        acc.history = [100, 50, -20]  # Last value negative
+        acc.history = [100, 50, -20]
         assert acc.loan_condition2(100) is False
 
-    # Test loan_condition2 returns False when condition not met
     def test_loan_condition2_returns_false(self, valid_pesel):
         acc = Account("Test", "User", valid_pesel)
-        acc.history = [100, 50, 0]  # Last value is 0, not > 0
+        acc.history = [100, 50, 0]
         result = acc.loan_condition2(100)
         assert result is False
 
-    # Test loan_condition1 edge case
     def test_loan_condition1_exactly_5_items(self, valid_pesel):
         acc = Account("Test", "User", valid_pesel)
-        acc.history = [50, 50, 50, 50, 50]  # Sum = 250
-        assert acc.loan_condition1(200) is True  # 250 > 200
-        assert acc.loan_condition1(300) is False  # 250 < 300
+        acc.history = [50, 50, 50, 50, 50]
+        assert acc.loan_condition1(200) is True
+        assert acc.loan_condition1(300) is False
 
     def test_registry_find_by_pesel_not_found(self, registry, valid_pesel):
         acc = Account("Jan", "Kowalski", valid_pesel)
@@ -182,12 +178,10 @@ class TestAccount:
         result = registry.find_by_pesel("99999999999")
         assert result is None
 
-    # Test AccountsRegistry delete_by_pesel returns False
     def test_registry_delete_nonexistent(self, registry):
         result = registry.delete_by_pesel("99999999999")
         assert result is False
 
-    # Test AccountsRegistry delete_by_pesel returns True
     def test_registry_delete_existing(self, registry, valid_pesel):
         acc = Account("Jan", "Kowalski", valid_pesel)
         registry.add_account(acc)
@@ -196,7 +190,6 @@ class TestAccount:
         assert result is True
         assert registry.count_accounts() == 0
 
-    # Test AccountsRegistry get_all_accounts
     def test_registry_get_all_accounts(self, registry):
         acc1 = Account("Jan", "Kowalski", "90010112345")
         acc2 = Account("Anna", "Nowak", "92020212345")
@@ -211,13 +204,12 @@ class TestAccount:
 
     def test_account_equality(self):
         acc1 = Account("Jan", "Kowalski", "90010112345")
-        acc2 = Account("Anna", "Nowak", "90010112345")  # Same PESEL
-        acc3 = Account("Jan", "Kowalski", "92020212345")  # Different PESEL
+        acc2 = Account("Anna", "Nowak", "90010112345")
+        acc3 = Account("Jan", "Kowalski", "92020212345")
 
-        assert acc1 == acc2  # Same PESEL
-        assert acc1 != acc3  # Different PESEL
+        assert acc1 == acc2
+        assert acc1 != acc3
 
-    # Test __eq__ with non-Account object
     def test_account_equality_with_non_account(self, valid_pesel):
         acc = Account("Jan", "Kowalski", valid_pesel)
         assert acc != "not an account"
@@ -225,20 +217,18 @@ class TestAccount:
         assert acc != None
 
     def test_age_validation_year_1960(self):
-        # PESEL for someone born in 1960
-        acc = Account("Test", "User", "60010112345")
-        # year >= 1960 should be True for 1960
-        assert acc._age_validation() is True  # Changed to True
 
-    # Test age validation with year 1961 (should pass)
+        acc = Account("Test", "User", "60010112345")
+
+        assert acc._age_validation() is True
+
     def test_age_validation_year_1961(self):
         acc = Account("Test", "User", "61010112345")
         assert acc._age_validation() is True
 
-    # Test submit_for_loan with loan_condition2 being True
     def test_submit_loan_condition2_true(self, valid_pesel):
         acc = Account("Test", "User", valid_pesel)
-        acc.history = [100, 200, 300]  # All positive, >= 3
+        acc.history = [100, 200, 300]
         result = acc.submit_for_loan(50)
         assert result is True
         assert acc.balance == 50
@@ -246,6 +236,6 @@ class TestAccount:
 
     def test_loan_balance_increase(self, valid_pesel):
         acc = Account("Test", "User", valid_pesel)
-        acc.history = [100, 200, 300, 400, 500]  # Sum = 1500
-        acc.submit_for_loan(1000)  # 1500 > 1000
+        acc.history = [100, 200, 300, 400, 500]
+        acc.submit_for_loan(1000)
         assert acc.balance == 1000
