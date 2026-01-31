@@ -77,6 +77,7 @@ class TestBuisnessAccount:
     )
 
     def test_business_account_take_loan(
+            self,
             business_account,
             balance,
             history,

@@ -122,7 +122,7 @@ class TestAccount:
         return AccountsRegistry()
 
     @pytest.mark.parametrize("number_of_accounts", [0, 1, 3, 5])
-    def test_accounts_registry_count(registry, number_of_accounts):
+    def test_accounts_registry_count(self, registry, number_of_accounts):
         for i in range(number_of_accounts):
             registry.add_account(Account("Jan", "Test", f"9001011234{i}"))
 
