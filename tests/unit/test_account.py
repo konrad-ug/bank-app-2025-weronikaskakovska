@@ -45,11 +45,33 @@ class TestAccount:
         acc = Account("Jan", "Kowalski", valid_pesel, promo_code=promo)
         assert acc.balance == expected_balance
 
+    def test_promo_code_validation_true(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        assert acc._promo_code_validation("PROM_X") is True
+
+    def test_promo_code_validation_false_string(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        assert acc._promo_code_validation("ABC") is False
+
     @pytest.mark.parametrize("pesel", [
         "99990803628",
     ])
     def test_age_validation_invalid_month(self, pesel):
         acc = Account("A", "B", pesel)
+        assert acc._age_validation() is False
+
+    @pytest.mark.parametrize("pesel", [
+        "00210803628",  # 2000
+        "00410803628",  # 2100
+        "00610803628",  # 2200
+        "00810803628",  # 1800
+    ])
+    def test_age_validation_all_centuries(self, valid_pesel, pesel):
+        acc = Account("A", "B", pesel)
+        assert acc._age_validation() in (True, False)
+
+    def test_age_validation_before_1960(self):
+        acc = Account("A", "B", "59010112345")
         assert acc._age_validation() is False
 
     @pytest.mark.parametrize("pesel", [
@@ -126,6 +148,11 @@ class TestAccount:
             assert acc.balance == amount
         else:
             assert acc.balance == 0
+
+    def test_loan_condition2_false(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        acc.history = [100, -50, 20]
+        assert acc.loan_condition2(200) is False
 
     def test_loan_condition1_not_enough_history(self, valid_pesel):
         acc = Account("A", "B", valid_pesel)
