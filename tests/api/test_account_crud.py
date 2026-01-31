@@ -1,12 +1,4 @@
-import requests
 import pytest
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from api import app
-
-
-BASE_URL = "http://127.0.0.1:5000/api/accounts"
 
 
 @pytest.fixture
@@ -17,174 +9,188 @@ def sample_account():
         "pesel": "90010112345"
     }
 
-@pytest.fixture(autouse=True)
-def cleanup_registry(sample_account):
-    """Clean up the sample account before and after each test."""
-    requests.delete(f"{BASE_URL}/{sample_account['pesel']}")
-    yield
-    requests.delete(f"{BASE_URL}/{sample_account['pesel']}")
 
-
-
-
-def test_create_account_invalid_json():
-    r = requests.post(BASE_URL, json=["invalid"])
-    assert r.status_code in [400, 500]
-
-def test_create_account_extra_fields(sample_account):
-    sample_account["extra"] = "ignored"
-    r = requests.post(BASE_URL, json=sample_account)
+def test_create_account(client, sample_account):
+    r = client.post("/api/accounts", json=sample_account)
     assert r.status_code == 201
-    r2 = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
-    assert "extra" not in r2.json()
 
 
-def test_create_account_duplicate_pesel(sample_account):
-    r1 = requests.post(BASE_URL, json=sample_account)
+def test_create_account_invalid_json(client):
+    r = client.post("/api/accounts", json=["invalid"])
+    assert r.status_code == 400
+
+
+def test_create_account_missing_fields(client):
+    r = client.post("/api/accounts", json={"name": "Jan"})
+    assert r.status_code == 400
+
+
+def test_create_account_extra_fields(client, sample_account):
+    sample_account["extra"] = "ignored"
+    r = client.post("/api/accounts", json=sample_account)
+    assert r.status_code == 201
+
+    r2 = client.get(f"/api/accounts/{sample_account['pesel']}")
+    data = r2.get_json()
+    assert "extra" not in data
+
+
+def test_create_account_duplicate_pesel(client, sample_account):
+    r1 = client.post("/api/accounts", json=sample_account)
     assert r1.status_code == 201
-    r2 = requests.post(BASE_URL, json=sample_account)
-    # API currently allows duplicate, test will pass; adjust API if duplicates not allowed
+
+    r2 = client.post("/api/accounts", json=sample_account)
+    # API currently allows duplicates
     assert r2.status_code == 201
 
 
-def test_get_account_by_pesel(sample_account):
-    requests.post(BASE_URL, json=sample_account)
-    r = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
+def test_get_account_by_pesel(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
+
+    r = client.get(f"/api/accounts/{sample_account['pesel']}")
     assert r.status_code == 200
-    assert r.json()["name"] == sample_account["name"]
+    assert r.get_json()["name"] == "Jan"
 
 
-def test_get_account_not_found():
-    r = requests.get(f"{BASE_URL}/99999999999")
-    assert r.status_code == 404
-
-def test_get_all_accounts_empty():
-    r = requests.get(BASE_URL)
-    assert r.status_code == 200
-    assert isinstance(r.json(), list)
-
-
-def test_update_account(sample_account):
-    requests.post(BASE_URL, json=sample_account)
-    r = requests.patch(f"{BASE_URL}/{sample_account['pesel']}", json={"name": "Adam"})
-    assert r.status_code == 200
-    r2 = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
-    assert r2.json()["name"] == "Adam"
-
-
-def test_update_account_surname(sample_account):
-    requests.post(BASE_URL, json=sample_account)
-    r = requests.patch(f"{BASE_URL}/{sample_account['pesel']}", json={"surname": "Nowak"})
-    assert r.status_code == 200
-    r2 = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
-    assert r2.json()["surname"] == "Nowak"
-    assert r2.json()["name"] == "Jan"
-
-
-def test_update_multiple_fields(sample_account):
-    requests.post(BASE_URL, json=sample_account)
-    r = requests.patch(
-        f"{BASE_URL}/{sample_account['pesel']}",
-        json={"name": "Adam", "surname": "Nowak"}
-    )
-    assert r.status_code == 200
-    r2 = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
-    assert r2.json()["name"] == "Adam"
-    assert r2.json()["surname"] == "Nowak"
-
-
-def test_update_account_not_found():
-    r = requests.patch(f"{BASE_URL}/99999999999", json={"name": "Adam"})
+def test_get_account_not_found(client):
+    r = client.get("/api/accounts/99999999999")
     assert r.status_code == 404
 
 
-def test_update_empty_json(sample_account):
-    requests.post(BASE_URL, json=sample_account)
-    r = requests.patch(f"{BASE_URL}/{sample_account['pesel']}", json={})
+def test_get_all_accounts_empty(client):
+    r = client.get("/api/accounts")
     assert r.status_code == 200
-    r2 = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
-    # Original values unchanged
-    assert r2.json()["name"] == "Jan"
-    assert r2.json()["surname"] == "Kowalski"
+    assert isinstance(r.get_json(), list)
 
 
-def test_update_with_ignored_fields(sample_account):
-    requests.post(BASE_URL, json=sample_account)
-    r = requests.patch(f"{BASE_URL}/{sample_account['pesel']}", json={"balance": 1000})
-    assert r.status_code == 200
-    r2 = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
-    # balance unchanged, API ignores unknown fields
-    assert r2.json()["balance"] == 0
+def test_get_all_accounts(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
 
-
-def test_delete_account(sample_account):
-    requests.post(BASE_URL, json=sample_account)
-    r = requests.delete(f"{BASE_URL}/{sample_account['pesel']}")
-    assert r.status_code == 200
-    r2 = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
-    assert r2.status_code == 404
-
-
-def test_delete_account_not_found():
-    r = requests.delete(f"{BASE_URL}/99999999999")
-    assert r.status_code == 404
-
-
-def test_get_all_accounts(sample_account):
-    requests.delete(f"{BASE_URL}/{sample_account['pesel']}")
-
-    # Create a few accounts
-    requests.post(BASE_URL, json=sample_account)
-
-    sample_account2 = {
+    second_account = {
         "name": "Anna",
         "surname": "Nowak",
         "pesel": "92020212345"
     }
-    requests.post(BASE_URL, json=sample_account2)
+    client.post("/api/accounts", json=second_account)
 
-    r = requests.get(BASE_URL)
+    r = client.get("/api/accounts")
+    accounts = r.get_json()
+
     assert r.status_code == 200
-    accounts = r.json()
-    assert len(accounts) >= 2
-
-    requests.delete(f"{BASE_URL}/{sample_account['pesel']}")
-    requests.delete(f"{BASE_URL}/{sample_account2['pesel']}")
+    assert len(accounts) == 2
 
 
+def test_update_account_name(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
 
-def test_create_account_invalid_pesel():
-    invalid_account = {
-        "name": "Jan",
-        "surname": "Kowalski",
-        "pesel": "123"
-    }
-    r = requests.post(BASE_URL, json=invalid_account)
-    assert r.status_code in [201, 400, 422]
+    r = client.patch(
+        f"/api/accounts/{sample_account['pesel']}",
+        json={"name": "Adam"}
+    )
+    assert r.status_code == 200
+
+    r2 = client.get(f"/api/accounts/{sample_account['pesel']}")
+    assert r2.get_json()["name"] == "Adam"
 
 
+def test_update_account_surname(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
+
+    r = client.patch(
+        f"/api/accounts/{sample_account['pesel']}",
+        json={"surname": "Nowak"}
+    )
+    assert r.status_code == 200
+
+    data = client.get(
+        f"/api/accounts/{sample_account['pesel']}"
+    ).get_json()
+
+    assert data["name"] == "Jan"
+    assert data["surname"] == "Nowak"
 
 
-def test_api_response_format(sample_account):
-    requests.post(BASE_URL, json=sample_account)
-    r2 = requests.get(f"{BASE_URL}/{sample_account['pesel']}")
-    data = r2.json()
+def test_update_multiple_fields(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
+
+    r = client.patch(
+        f"/api/accounts/{sample_account['pesel']}",
+        json={"name": "Adam", "surname": "Nowak"}
+    )
+    assert r.status_code == 200
+
+    data = client.get(
+        f"/api/accounts/{sample_account['pesel']}"
+    ).get_json()
+
+    assert data["name"] == "Adam"
+    assert data["surname"] == "Nowak"
+
+
+def test_update_account_not_found(client):
+    r = client.patch(
+        "/api/accounts/99999999999",
+        json={"name": "Adam"}
+    )
+    assert r.status_code == 404
+
+
+def test_update_empty_json(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
+
+    r = client.patch(
+        f"/api/accounts/{sample_account['pesel']}",
+        json={}
+    )
+    assert r.status_code == 200
+
+    data = client.get(
+        f"/api/accounts/{sample_account['pesel']}"
+    ).get_json()
+
+    assert data["name"] == "Jan"
+    assert data["surname"] == "Kowalski"
+
+
+def test_update_with_ignored_fields(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
+
+    r = client.patch(
+        f"/api/accounts/{sample_account['pesel']}",
+        json={"balance": 9999}
+    )
+    assert r.status_code == 200
+
+    data = client.get(
+        f"/api/accounts/{sample_account['pesel']}"
+    ).get_json()
+
+    assert data["balance"] == 0
+
+
+def test_delete_account(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
+
+    r = client.delete(f"/api/accounts/{sample_account['pesel']}")
+    assert r.status_code == 200
+
+    r2 = client.get(f"/api/accounts/{sample_account['pesel']}")
+    assert r2.status_code == 404
+
+
+def test_delete_account_not_found(client):
+    r = client.delete("/api/accounts/99999999999")
+    assert r.status_code == 404
+
+
+def test_api_response_format(client, sample_account):
+    client.post("/api/accounts", json=sample_account)
+
+    data = client.get(
+        f"/api/accounts/{sample_account['pesel']}"
+    ).get_json()
+
     assert "name" in data
     assert "surname" in data
     assert "pesel" in data
-
-
-def test_create_account_missing_fields():
-    incomplete_account = {
-        "name": "Jan"
-    }
-    r = requests.post(BASE_URL, json=incomplete_account)
-    assert r.status_code == 500
-
-def test_create_account():
-    client = app.test_client()
-    response = client.post(
-        "/api/accounts",
-        json={"name": "Alice", "surname": "Smith", "pesel": "90010112345"}
-    )
-    assert response.status_code == 201
+    assert "balance" in data
