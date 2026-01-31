@@ -26,3 +26,14 @@ class BuisnessAccount:
         self.history.append(-amount)
         self.history.append(-5)
 
+    def take_loan(self, amount):
+        has_enough_balance = self.balance >= 2 * amount
+        has_zus_transfer = -1775 in self.history
+
+        if has_enough_balance and has_zus_transfer:
+            self.balance += amount
+            self.history.append(amount)
+            return True
+        else:
+            return False
+
