@@ -20,6 +20,9 @@ class BuisnessAccount:
 
         self.nip = nip
 
+    def calculate_tax(self):
+        return 0.19
+
     def _validate_nip_in_mf(self, nip):
         try:
             today = datetime.now().strftime("%Y-%m-%d")
