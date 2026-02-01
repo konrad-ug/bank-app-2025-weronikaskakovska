@@ -193,3 +193,10 @@ class TestAccount:
         acc = Account("A", "B", "02270803628")
         acc.history = [100, -20]  # fewer than 3 entries -> should hit the len < 3 branch
         assert acc.loan_condition2(100) is False
+
+    def test_add_duplicate_pesel_raises(self, registry):
+        a1 = Account("A", "One", "02270803628")
+        a2 = Account("B", "Two", "02270803628")  # same pesel
+        registry.add_account(a1)
+        with pytest.raises(ValueError):
+            registry.add_account(a2)
