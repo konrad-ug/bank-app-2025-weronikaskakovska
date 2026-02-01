@@ -10,3 +10,5 @@ def client():
 @pytest.fixture(autouse=True)
 def clear_registry():
     api.registry.accounts.clear()
+    yield
+    api.registry.accounts.clear()

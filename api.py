@@ -1,47 +1,72 @@
 from flask import Flask, request, jsonify
-from src.account import Account, AccountsRegistry
+from account import Account, AccountsRegistry
 
 app = Flask(__name__)
 registry = AccountsRegistry()
 
 
+def account_to_dict(acc: Account):
+    return {
+        "name": acc.first_name,
+        "surname": acc.last_name,
+        "pesel": acc.pesel,
+        "balance": acc.balance,
+    }
+
+
 @app.route("/api/accounts", methods=["POST"])
 def create_account():
-    data = request.get_json()
-
+    data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        return jsonify({"error": "Invalid JSON format, expected an object"}), 400
+        return jsonify({"error": "Invalid JSON"}), 400
 
-    required_fields = ["name", "surname", "pesel"]
-    missing_fields = [f for f in required_fields if f not in data]
-    if missing_fields:
-        return jsonify({"error": f"Missing fields: {', '.join(missing_fields)}"}), 400
+    if not all(k in data for k in ("name", "surname", "pesel")):
+        return jsonify({"error": "Missing fields"}), 400
 
+    acc = Account(data["name"], data["surname"], data["pesel"])
+    try:
+        registry.add_account(acc)
+    except ValueError:
+        return jsonify({"error": "Pesel already exists"}), 409
 
-    account = Account(
-        data["name"],
-        data["surname"],
-        data["pesel"]
-    )
-    registry.add_account(account)
-    return jsonify({"message": "Account created"}), 201
-
+    return "", 201
 
 
 @app.route("/api/accounts", methods=["GET"])
 def get_all_accounts():
-    accounts = registry.get_all_accounts()
-    result = [
-        {
-            "name": acc.first_name,
-            "surname": acc.last_name,
-            "pesel": acc.pesel,
-            "balance": acc.balance
-        }
-        for acc in accounts
-    ]
-    return jsonify(result), 200
+    return jsonify([account_to_dict(a) for a in registry.get_all_accounts()]), 200
 
+
+@app.route("/api/accounts/<pesel>", methods=["GET", "PATCH", "DELETE"])
+def account_detail(pesel):
+    if request.method == "GET":
+        acc = registry.find_by_pesel(pesel)
+        if acc is None:
+            return jsonify({"error": "Not found"}), 404
+        return jsonify(account_to_dict(acc)), 200
+
+    if request.method == "PATCH":
+        acc = registry.find_by_pesel(pesel)
+        if acc is None:
+            return jsonify({"error": "Not found"}), 404
+
+        data = request.get_json(silent=True)
+        if data is None or not isinstance(data, dict):
+            return jsonify({"error": "Invalid JSON"}), 400
+
+        if "name" in data:
+            acc.first_name = data["name"]
+        if "surname" in data:
+            acc.last_name = data["surname"]
+
+        return "", 200
+
+    # DELETE
+    acc = registry.find_by_pesel(pesel)
+    if acc is None:
+        return jsonify({"error": "Not found"}), 404
+    registry.delete_by_pesel(pesel)
+    return "", 200
 
 
 @app.route("/api/accounts/count", methods=["GET"])
@@ -49,47 +74,33 @@ def get_count():
     return jsonify({"count": registry.count_accounts()}), 200
 
 
-
-@app.route("/api/accounts/<pesel>", methods=["GET"])
-def get_account(pesel):
+@app.route("/api/accounts/<pesel>/transfer", methods=["POST"])
+def transfer(pesel):
     acc = registry.find_by_pesel(pesel)
-
     if acc is None:
         return jsonify({"error": "Not found"}), 404
 
-    return jsonify({
-        "name": acc.first_name,
-        "surname": acc.last_name,
-        "pesel": acc.pesel,
-        "balance": acc.balance
-    }), 200
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "Invalid JSON"}), 400
 
+    if "amount" not in data or "type" not in data:
+        return jsonify({"error": "Missing fields"}), 400
 
+    amount = data["amount"]
+    t = data["type"]
 
-@app.route("/api/accounts/<pesel>", methods=["PATCH"])
-def update_account(pesel):
-    acc = registry.find_by_pesel(pesel)
+    if t not in ("incoming", "outgoing", "express"):
+        return jsonify({"error": "Unknown transfer type"}), 400
 
-    if acc is None:
-        return jsonify({"error": "Not found"}), 404
+    try:
+        if t == "incoming":
+            acc.deposit(amount)
+        elif t == "outgoing":
+            acc.withdraw(amount)
+        elif t == "express":
+            acc.express_transfer(amount)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 422
 
-    data = request.get_json()
-
-    if "name" in data:
-        acc.first_name = data["name"]
-
-    if "surname" in data:
-        acc.last_name = data["surname"]
-
-    return jsonify({"message": "Account updated"}), 200
-
-
-
-@app.route("/api/accounts/<pesel>", methods=["DELETE"])
-def delete_account(pesel):
-    success = registry.delete_by_pesel(pesel)
-
-    if not success:
-        return jsonify({"error": "Not found"}), 404
-
-    return jsonify({"message": "Account deleted"}), 200
+    return jsonify({"message": "Zlecenie przyjęto do realizacji"}), 200

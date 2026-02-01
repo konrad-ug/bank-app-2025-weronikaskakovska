@@ -90,6 +90,8 @@ class AccountsRegistry:
         self.accounts = []
 
     def add_account(self, account):
+        if self.find_by_pesel(account.pesel) is not None:
+            raise ValueError("Pesel already exists")
         self.accounts.append(account)
 
     def find_by_pesel(self, pesel):
