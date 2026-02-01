@@ -1,3 +1,6 @@
+from datetime import datetime
+from smtp.smtp import SMTPClient
+
 class Account:
     def __init__(self, first_name, last_name, pesel, promo_code = None):
         self.first_name = first_name
@@ -83,6 +86,11 @@ class Account:
         if len(self.history) < 3:
             return False
         return self.history[-1] > 0 and self.history[-2] > 0 and self.history[-3] > 0
+
+    def send_history_via_email(self, email_address: str) -> bool:
+        subject = f"Account Transfer History {datetime.now().strftime('%Y-%m-%d')}"
+        text = f"Personal account history: {self.history}"
+        return SMTPClient.send(subject, text, email_address)
 
 
 class AccountsRegistry:

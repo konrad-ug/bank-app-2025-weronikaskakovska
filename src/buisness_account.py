@@ -1,6 +1,8 @@
 import os
 import requests
 from datetime import datetime
+from smtp.smtp import SMTPClient
+
 
 
 class BuisnessAccount: # pragma: no cover
@@ -11,49 +13,35 @@ class BuisnessAccount: # pragma: no cover
         self.history = []
 
         if len(nip) != 10:
-            print(f"[WARNING] NIP has invalid length: {len(nip)} (expected 10)")
             self.nip = "Invalid"
             return
-
-        if not self._validate_nip_in_mf(nip):
-            raise ValueError("Company not registered!!")
-
         self.nip = nip
+
+        if not self._nip_validation():
+            raise ValueError("Company not registered!!")
 
     def calculate_tax(self):
         return 0.19
 
-    def _validate_nip_in_mf(self, nip):
+    def _validate_nip_in_mf(self, nip: str) -> bool:
         try:
-            today = datetime.now().strftime("%Y-%m-%d")
-            url = f"{self.MF_API_URL}/api/search/nip/{nip}?date={today}"
-            print(f"[INFO] Validating NIP {nip} at {url}")
-            response = requests.get(url, timeout=10)
-            print(f"[INFO] Response status: {response.status_code}")
-            print(f"[INFO] Response body: {response.text}")
+            response = requests.get(
+                f"{self.MF_API_URL}/api/search/nip/{nip}?date=2026-02-01",
+                timeout=5
+            )
 
             if response.status_code != 200:
-                print(f"[WARNING] API returned status {response.status_code}")
                 return False
 
             data = response.json()
+            result = data.get("result")
 
-            if "result" in data and data["result"]:
-                subject = data["result"].get("subject", {})
-                status_vat = subject.get("statusVat", "")
+            if not result or not result.get("subject"):
+                return False
 
-                print(f"[INFO] VAT status: {status_vat}")
+            return result["subject"].get("statusVat") == "Czynny"
 
-                return status_vat == "Czynny"
-
-            print("[WARNING] No result in API response")
-            return False
-
-        except requests.RequestException as e:
-            print(f"[ERROR] Request failed: {e}")
-            return False
-        except (KeyError, ValueError) as e:
-            print(f"[ERROR] Failed to parse response: {e}")
+        except Exception:
             return False
 
     def deposit(self, amount):
@@ -83,4 +71,16 @@ class BuisnessAccount: # pragma: no cover
             return True
         else:
             return False
+
+    def _nip_validation(self) -> bool:
+        return self._validate_nip_in_mf(self.nip)
+
+    def send_history_via_email(self, email_address: str) -> bool:
+        """
+        Przygotowuje temat i treść maila dla konta firmowego i deleguje
+        wysyłkę do SMTPClient.send. Zwraca True/False w zależności od wyniku wysyłki.
+        """
+        subject = f"Account Transfer History {datetime.now().strftime('%Y-%m-%d')}"
+        text = f"Company account history: {self.history}"
+        return SMTPClient.send(subject, text, email_address)
 
