@@ -1,4 +1,4 @@
-name: API Tests
+name: API Performance Tests
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  api-tests:
+  perf-tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +37,6 @@ jobs:
             sleep 1
           done
 
-      - name: Execute API tests
+      - name: Execute API Performance tests
         run: |
-          python3 -m pytest tests/api -v
+          python3 -m pytest tests/perf -v
