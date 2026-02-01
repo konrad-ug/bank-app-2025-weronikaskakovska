@@ -176,3 +176,16 @@ class TestAccount:
     def test_account_eq_with_non_account(self, valid_pesel):
         acc = Account("Jan", "Kowalski", valid_pesel)
         assert acc != 123 and acc != None and acc != "string"
+
+    def test_age_validation_invalid_month_high(self):
+        acc = Account("A", "B", "59230112345")  # month = 23 → invalid
+        assert acc._age_validation() is False
+
+    def test_age_validation_invalid_month_zero(self):
+        acc = Account("A", "B", "59000112345")  # month = 00 → invalid
+        assert acc._age_validation() is False
+
+    def test_age_validation_invalid_pesel_length(self):
+        acc = Account("A", "B", "123")  # too short
+        assert acc._age_validation() is False
+
