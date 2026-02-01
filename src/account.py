@@ -75,7 +75,7 @@ class Account:
 
     def loan_condition1(self, amount):
         if len(self.history) >= 5:
-            return sum(self.history[-5:]) > amount
+            return sum(self.history[-5:]) >= amount
         else:
             return False
 

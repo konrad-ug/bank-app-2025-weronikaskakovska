@@ -194,3 +194,18 @@ def test_api_response_format(client, sample_account):
     assert "surname" in data
     assert "pesel" in data
     assert "balance" in data
+
+def test_get_count_endpoint(client, sample_account):
+    # create two accounts via the API (matches style of your other tests)
+    client.post("/api/accounts", json=sample_account)
+
+    second_account = {
+        "name": "Anna",
+        "surname": "Nowak",
+        "pesel": "92020212345"
+    }
+    client.post("/api/accounts", json=second_account)
+
+    r = client.get("/api/accounts/count")
+    assert r.status_code == 200
+    assert r.get_json() == {"count": 2}
