@@ -200,3 +200,50 @@ class TestAccount:
         registry.add_account(a1)
         with pytest.raises(ValueError):
             registry.add_account(a2)
+
+    def test_withdraw_exact_balance(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        acc.deposit(100)
+        acc.withdraw(100)
+        assert acc.balance == 0
+        assert acc.history[-1] == -100
+
+    def test_deposit_zero(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        acc.deposit(0)
+        assert acc.balance == 0
+        assert acc.history == [0]
+
+    def test_express_transfer_history_entries(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        acc.deposit(100)
+        acc.express_transfer(20)
+
+        assert acc.history[-2:] == [-20, -1]
+
+    def test_submit_for_loan_failure_does_not_change_history(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        acc.history = [10, -5, 3]
+
+        result = acc.submit_for_loan(1000)
+
+        assert result is False
+        assert acc.history == [10, -5, 3]
+        assert acc.balance == 0
+
+    def test_loan_condition1_exact_sum(self, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        acc.history = [50, 50, 50, 50, 0]  # sum = 200
+
+        assert acc.loan_condition1(200) is True
+
+    def test_registry_delete_removes_account(self, registry, valid_pesel):
+        acc = Account("A", "B", valid_pesel)
+        registry.add_account(acc)
+
+        registry.delete_by_pesel(valid_pesel)
+        assert registry.find_by_pesel(valid_pesel) is None
+
+    def test_registry_add_non_account_object(self, registry):
+        with pytest.raises(AttributeError):
+            registry.add_account("not an account")
