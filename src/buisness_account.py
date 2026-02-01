@@ -76,11 +76,9 @@ class BuisnessAccount: # pragma: no cover
         return self._validate_nip_in_mf(self.nip)
 
     def send_history_via_email(self, email_address: str) -> bool:
-        """
-        Przygotowuje temat i treść maila dla konta firmowego i deleguje
-        wysyłkę do SMTPClient.send. Zwraca True/False w zależności od wyniku wysyłki.
-        """
         subject = f"Account Transfer History {datetime.now().strftime('%Y-%m-%d')}"
         text = f"Company account history: {self.history}"
-        return SMTPClient.send(subject, text, email_address)
-
+        try:
+            return SMTPClient.send(subject, text, email_address)
+        except Exception:
+            return False

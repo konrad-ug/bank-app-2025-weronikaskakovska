@@ -90,7 +90,10 @@ class Account:
     def send_history_via_email(self, email_address: str) -> bool:
         subject = f"Account Transfer History {datetime.now().strftime('%Y-%m-%d')}"
         text = f"Personal account history: {self.history}"
-        return SMTPClient.send(subject, text, email_address)
+        try:
+            return SMTPClient.send(subject, text, email_address)
+        except Exception:
+            return False
 
 
 class AccountsRegistry:
