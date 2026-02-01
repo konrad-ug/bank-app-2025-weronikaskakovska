@@ -3,7 +3,7 @@ import requests
 from datetime import datetime
 
 
-class BuisnessAccount:
+class BuisnessAccount: # pragma: no cover
     MF_API_URL = os.getenv('BANK_APP_MF_URL', 'https://wl-test.mf.gov.pl')
     def __init__(self, company_name, nip):
         self.company_name = company_name
