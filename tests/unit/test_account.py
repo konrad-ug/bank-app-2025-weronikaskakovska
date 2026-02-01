@@ -189,3 +189,7 @@ class TestAccount:
         acc = Account("A", "B", "123")  # too short
         assert acc._age_validation() is False
 
+    def test_loan_condition2_not_enough_history(self):
+        acc = Account("A", "B", "02270803628")
+        acc.history = [100, -20]  # fewer than 3 entries -> should hit the len < 3 branch
+        assert acc.loan_condition2(100) is False
