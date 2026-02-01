@@ -1,97 +1,202 @@
-import subprocess
-import time
+import pytest
 import requests
-import os
-import sys
+import time
 
+BASE_URL = "http://localhost:5000/api"
 
-BASE_URL = "http://127.0.0.1:5000"
+class TestAccountPerformance:
 
-def start_flask():
-    env = os.environ.copy()
-    subprocess.Popen(
-        [sys.executable, "-m", "flask", "run", "--host=127.0.0.1", "--port=5000"],
-        env=env
-    )
+    def test_create_delete_account_100_times(self):
+        timeout = 0.5
+        iterations = 100
 
+        for i in range(iterations):
+            # Generuj unikalny PESEL (11 cyfr)
+            pesel = f"{90000000000 + i:011d}"
 
-def wait_for_api():
-    for _ in range(60):
-        try:
-            requests.get(BASE_URL, timeout=0.3)
-            return
-        except Exception:
-            time.sleep(0.2)
-    raise RuntimeError("API did not start")
+            account_data = {
+                "first_name": f"Jan{i}",
+                "last_name": "Test",
+                "pesel": pesel
+            }
 
+            # Tworzenie konta
+            start_time = time.time()
+            create_response = requests.post(
+                f"{BASE_URL}/accounts",
+                json=account_data,
+                timeout=timeout
+            )
+            create_duration = time.time() - start_time
 
-start_flask()
-wait_for_api()
+            # Sprawdzenie poprawności odpowiedzi
+            assert create_response.status_code == 201, \
+                f"Iteracja {i}: Nieprawidłowy status code przy tworzeniu: {create_response.status_code}"
 
-def test_create_and_delete_account_100_times():
-    for i in range(100):
-        payload = {
-            "first_name": f"Jan{i}",
+            # Sprawdzenie czasu odpowiedzi
+            assert create_duration < timeout, \
+                f"Iteracja {i}: Tworzenie konta zajęło {create_duration:.3f}s (limit: {timeout}s)"
+
+            # Pobranie ID utworzonego konta (w Twoim API to PESEL)
+            account_id = create_response.json().get("id")
+            assert account_id is not None, f"Iteracja {i}: Brak ID w odpowiedzi"
+            assert account_id == pesel, f"Iteracja {i}: ID nie zgadza się z PESEL"
+
+            # Usuwanie konta
+            start_time = time.time()
+            delete_response = requests.delete(
+                f"{BASE_URL}/accounts/{account_id}",
+                timeout=timeout
+            )
+            delete_duration = time.time() - start_time
+
+            # Sprawdzenie poprawności odpowiedzi
+            assert delete_response.status_code == 200, \
+                f"Iteracja {i}: Nieprawidłowy status code przy usuwaniu: {delete_response.status_code}"
+
+            # Sprawdzenie czasu odpowiedzi
+            assert delete_duration < timeout, \
+                f"Iteracja {i}: Usuwanie konta zajęło {delete_duration:.3f}s (limit: {timeout}s)"
+
+    def test_account_with_100_incoming_transfers(self):
+        timeout = 0.5
+        initial_balance = 0  # W Twoim API nowe konto ma saldo 0
+        deposit_amount = 50.0
+        number_of_deposits = 100
+
+        # Generuj unikalny PESEL
+        pesel = "80000000000"
+
+        # Tworzenie konta
+        account_data = {
+            "first_name": "Performance",
             "last_name": "Test",
-            "pesel": f"900000000{i}"
+            "pesel": pesel
         }
 
-        # CREATE
-        create_resp = requests.post(
+        start_time = time.time()
+        create_response = requests.post(
             f"{BASE_URL}/accounts",
-            json=payload,
-            timeout=0.5
+            json=account_data,
+            timeout=timeout
         )
+        create_duration = time.time() - start_time
 
-        assert create_resp.status_code == 201
-        account_id = create_resp.json()["id"]
+        assert create_response.status_code == 201, \
+            f"Nieprawidłowy status code przy tworzeniu konta: {create_response.status_code}"
+        assert create_duration < timeout, \
+            f"Tworzenie konta zajęło {create_duration:.3f}s (limit: {timeout}s)"
 
-        # DELETE
-        delete_resp = requests.delete(
+        account_id = create_response.json().get("id")
+        assert account_id is not None, "Brak ID w odpowiedzi"
+
+        # Wykonywanie wpłat (deposit)
+        for i in range(number_of_deposits):
+            deposit_data = {
+                "amount": deposit_amount
+            }
+
+            start_time = time.time()
+            deposit_response = requests.post(
+                f"{BASE_URL}/accounts/{account_id}/deposit",
+                json=deposit_data,
+                timeout=timeout
+            )
+            deposit_duration = time.time() - start_time
+
+            # Sprawdzenie poprawności odpowiedzi
+            assert deposit_response.status_code == 200, \
+                f"Wpłata {i}: Nieprawidłowy status code: {deposit_response.status_code}"
+
+            # Sprawdzenie czasu odpowiedzi
+            assert deposit_duration < timeout, \
+                f"Wpłata {i}: Operacja zajęła {deposit_duration:.3f}s (limit: {timeout}s)"
+
+        # Sprawdzenie końcowego salda
+        start_time = time.time()
+        balance_response = requests.get(
             f"{BASE_URL}/accounts/{account_id}",
-            timeout=1
+            timeout=timeout
         )
+        balance_duration = time.time() - start_time
 
-        assert delete_resp.status_code == 200
+        assert balance_response.status_code == 200, \
+            f"Nieprawidłowy status code przy pobieraniu salda: {balance_response.status_code}"
+        assert balance_duration < timeout, \
+            f"Pobieranie salda zajęło {balance_duration:.3f}s (limit: {timeout}s)"
+
+        # Sprawdzenie poprawności salda
+        expected_balance = initial_balance + (deposit_amount * number_of_deposits)
+        actual_balance = balance_response.json().get("balance")
+
+        assert actual_balance == expected_balance, \
+            f"Nieprawidłowe saldo. Oczekiwano: {expected_balance}, otrzymano: {actual_balance}"
+
+        # Sprzątanie - usunięcie konta
+        requests.delete(f"{BASE_URL}/accounts/{account_id}", timeout=timeout)
 
 
-def test_create_account_and_100_incoming_transfers():
-    payload = {
-        "first_name": "Perf",
-        "last_name": "Test",
-        "pesel": "80000000000"
-    }
+class TestBulkAccountOperations:
+    """Dodatkowe testy dla chętnych - operacje masowe"""
 
-    create_resp = requests.post(
-        f"{BASE_URL}/accounts",
-        json=payload,
-        timeout=1
-    )
+    @pytest.mark.skip(reason="Test dla chętnych - może trwać długo")
+    def test_create_1000_accounts_then_delete_all(self):
+        timeout = 0.5
+        number_of_accounts = 1000
+        account_ids = []
 
-    assert create_resp.status_code == 201
-    account_id = create_resp.json()["id"]
+        print(f"\nTworzenie {number_of_accounts} kont...")
 
-    expected_balance = 0
+        # Faza 1: Tworzenie wszystkich kont
+        for i in range(number_of_accounts):
+            # Generuj unikalny PESEL (11 cyfr)
+            pesel = f"{85000000000 + i:011d}"
 
-    for i in range(100):
-        transfer_payload = {
-            "amount": 10
-        }
+            account_data = {
+                "first_name": f"Bulk{i}",
+                "last_name": "Test",
+                "pesel": pesel
+            }
 
-        transfer_resp = requests.post(
-            f"{BASE_URL}/accounts/{account_id}/deposit",
-            json=transfer_payload,
-            timeout=1
-        )
+            start_time = time.time()
+            response = requests.post(
+                f"{BASE_URL}/accounts",
+                json=account_data,
+                timeout=timeout
+            )
+            duration = time.time() - start_time
 
-        assert transfer_resp.status_code == 200
-        expected_balance += 10
+            assert response.status_code == 201, \
+                f"Konto {i}: Nieprawidłowy status code: {response.status_code}"
+            assert duration < timeout, \
+                f"Konto {i}: Tworzenie zajęło {duration:.3f}s (limit: {timeout}s)"
 
-    # CHECK BALANCE
-    balance_resp = requests.get(
-        f"{BASE_URL}/accounts/{account_id}",
-        timeout=1
-    )
+            account_id = response.json().get("id")
+            assert account_id is not None, f"Konto {i}: Brak ID w odpowiedzi"
+            account_ids.append(account_id)
 
-    assert balance_resp.status_code == 200
-    assert balance_resp.json()["balance"] == expected_balance
+            # Progress info co 100 kont
+            if (i + 1) % 100 == 0:
+                print(f"Utworzono {i + 1}/{number_of_accounts} kont")
+
+        print(f"Wszystkie {number_of_accounts} kont utworzone. Rozpoczynam usuwanie...")
+
+        # Faza 2: Usuwanie wszystkich kont
+        for i, account_id in enumerate(account_ids):
+            start_time = time.time()
+            response = requests.delete(
+                f"{BASE_URL}/accounts/{account_id}",
+                timeout=timeout
+            )
+            duration = time.time() - start_time
+
+            assert response.status_code == 200, \
+                f"Konto {i} (ID: {account_id}): Nieprawidłowy status code: {response.status_code}"
+            assert duration < timeout, \
+                f"Konto {i} (ID: {account_id}): Usuwanie zajęło {duration:.3f}s (limit: {timeout}s)"
+
+            # Progress info co 100 kont
+            if (i + 1) % 100 == 0:
+                print(f"Usunięto {i + 1}/{number_of_accounts} kont")
+
+        print(f"Wszystkie {number_of_accounts} kont usunięte pomyślnie!")

@@ -22,10 +22,11 @@ jobs:
 
     - name: Start flask
       run: |
-        cd $GITHUB_WORKSPACE
         export PYTHONPATH=$GITHUB_WORKSPACE
-        flask --app api run --host=0.0.0.0 --port=5000 &
-        sleep 5
+        flask --app api run --host=127.0.0.1 --port=5000 > flask.log 2>&1 &
+        sleep 10
+        cat flask.log
+    
 
     - name: Execute API tests
       run: |

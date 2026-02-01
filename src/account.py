@@ -1,5 +1,8 @@
 from datetime import datetime
-from smtp.smtp import SMTPClient
+try:
+    from smtp.smtp import SMTPClient
+except ImportError:
+    SMTPClient = None
 
 class Account:
     def __init__(self, first_name, last_name, pesel, promo_code = None):
