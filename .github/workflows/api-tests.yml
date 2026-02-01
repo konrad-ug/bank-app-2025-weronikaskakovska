@@ -1,0 +1,42 @@
+name: API Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Start Flask
+        run: |
+          export FLASK_APP=api.py
+          export FLASK_ENV=development
+          export PYTHONPATH=$GITHUB_WORKSPACE
+          flask run &
+
+      - name: Wait for Flask to start
+        run: |
+          for i in $(seq 1 10); do
+            curl -s http://localhost:5000/api/accounts && break
+            echo "Waiting for Flask... attempt $i"
+            sleep 1
+          done
+
+      - name: Execute API tests
+        run: |
+          python3 -m pytest tests/api -v

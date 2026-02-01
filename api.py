@@ -1,6 +1,9 @@
-from flask import Flask, request, jsonify
-from account import Account, AccountsRegistry
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
+from flask import Flask, request, jsonify
+from src.account import Account, AccountsRegistry
 app = Flask(__name__)
 registry = AccountsRegistry()
 
