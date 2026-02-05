@@ -107,3 +107,6 @@ def transfer(pesel):
         return jsonify({"error": str(e)}), 422
 
     return jsonify({"message": "Zlecenie przyjęto do realizacji"}), 200
+
+if __name__ == "__main__":
+    app.run(debug=False, use_reloader=False)

@@ -1,5 +1,5 @@
 from datetime import datetime
-from smtp.smtp import SMTPClient
+#from smtp.smtp import SMTPClient
 
 class Account:
     def __init__(self, first_name, last_name, pesel, promo_code = None):
@@ -98,29 +98,24 @@ class Account:
 
 class AccountsRegistry:
     def __init__(self):
-        self.accounts = []
+        self.accounts = {}   # pesel -> Account
 
     def add_account(self, account):
-        if self.find_by_pesel(account.pesel) is not None:
+        if account.pesel in self.accounts:
             raise ValueError("Pesel already exists")
-        self.accounts.append(account)
+        self.accounts[account.pesel] = account
 
     def find_by_pesel(self, pesel):
-        for account in self.accounts:
-            if account.pesel == pesel:
-                return account
-        return None
+        return self.accounts.get(pesel)
 
     def delete_by_pesel(self, pesel):
-        account = self.find_by_pesel(pesel)
-        if account is None:
+        if pesel not in self.accounts:
             return False
-
-        self.accounts = [acc for acc in self.accounts if acc.pesel != pesel]
+        del self.accounts[pesel]
         return True
 
     def get_all_accounts(self):
-        return self.accounts
+        return list(self.accounts.values())
 
     def count_accounts(self):
         return len(self.accounts)
