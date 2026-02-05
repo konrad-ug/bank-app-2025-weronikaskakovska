@@ -1,5 +1,5 @@
 from datetime import datetime
-#from smtp.smtp import SMTPClient
+from smtp.smtp import SMTPClient
 
 class Account:
     def __init__(self, first_name, last_name, pesel, promo_code = None):
