@@ -1,12 +1,8 @@
-import pytest
-import builtins
-import importlib
-import sys
 from datetime import datetime
 from unittest.mock import Mock
 from smtp.smtp import SMTPClient
-from account import Account
-from buisness_account import BuisnessAccount
+from src.account import Account
+from src.buisness_account import BuisnessAccount
 import smtp.smtp as smtpmod
 
 

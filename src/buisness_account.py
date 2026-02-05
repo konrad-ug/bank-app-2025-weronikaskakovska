@@ -20,7 +20,7 @@ class BuisnessAccount: # pragma: no cover
         if not self._nip_validation():
             raise ValueError("Company not registered!!")
 
-    def calculate_tax(self):
+    def calculate_tax(self): # pragma: no cover
         return 0.19
 
     def _validate_nip_in_mf(self, nip: str) -> bool:

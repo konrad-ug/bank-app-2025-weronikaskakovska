@@ -165,6 +165,11 @@ class TestBuisnessAccount:
         assert result is expected_result
         assert business_account.balance == expected_balance
 
+    def test_calculate_tax(monkeypatch):
+        monkeypatch.setattr(BuisnessAccount, "_nip_validation", lambda self: True)
+        acc = BuisnessAccount("Firma", "1234567891")  # company_name, nip
+        assert acc.calculate_tax() == 0.19
+
     class TestFeature18NIPValidation:
 
         @patch('buisness_account.requests.get')
